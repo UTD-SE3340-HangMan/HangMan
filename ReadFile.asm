@@ -1,27 +1,47 @@
-.data 
-ifile:	.asciiz	"words.txt"      # filename of input
-buffer:	.space	1024
+.data
+file:	.ascii 	""	# filename for input
+filePrompt:   .asciiz "Please enter the input file name: "
+endLine:.asciiz "\n"	# Newline character
+buffer: .space 1024		# Reserve space for file contents
 
 .text
-# Open a file for reading
-li		$v0, 13     # system call for open file
-la		$a0, ifile	# Store fileName in a0
-li		$a1, 0      # Open for reading
-syscall				# open a file (file descriptor returned in $v0)
-move 	$a0, $v0	# save the file descriptor in a0
+getFileName:	# Prompt for name of word file
+	# Display prompt
+	li $v0, 4
+	la $a0, filePrompt
+    syscall
+	# Get user input
+	li	$v0, 8
+	la	$a0, file
+	li	$a1, 21
+	syscall		# Store up to 21 characters as "file"
 
-#read from file
-li		$v0, 14       # system call for read from file
-la		$a1, buffer   # address of buffer to which to read
-li		$a2, 1024     # hardcoded buffer length
-syscall	# read from file
+readFile:	# Read the file
+	# Open file for reading
+	li   $v0, 13       # system call for open file
+	la   $a0, file     # input file name
+	li   $a1, 0        # flag - 0 for reading
+	li   $a2, 0        # mode is ignored
+	syscall            # open a file 
+	move $s0, $v0      # save the file descriptor in $s0
 
+	# Read from the file just opened into $s1
+	li		$v0, 14			# system call for reading from file
+	move	$a0, $s0		# file descriptor 
+	la		$a1, buffer		# address of buffer from which to read
+	li		$a2, 1024		# buffer length
+	syscall            # read from file
 
+end:	# Close the file in $s0 and end the program
+	# Close file
+	jal fileClose
 
-# Close the file 
-li		$v0, 16		# system call for close file
-move	$a0, $s6	# file descriptor to close
-syscall			# close file
-# Exit program
-li		$v0, 10	# Exit code
-syscall			# Exits cleanly
+	# Syscall to end program
+    li $v0, 10
+    syscall
+
+fileClose:	# Close the file in $s0
+    li   $v0, 16       # system call for close file
+    move $a0, $s0      # file descriptor to close
+    syscall            # close file
+	jr $ra	# return to caller
