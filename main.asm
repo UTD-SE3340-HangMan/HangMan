@@ -258,23 +258,23 @@ print_num:
 
 
 generateWordToDisplay:
-	addi $sp, $sp, -8			#allocate 4 bytes
+	addi $sp, $sp, -12			#allocate 4 bytes
 	sw $a0, 0($sp)				#store old a0
 	sw $a1, 4($sp)				#store old a1
+	sw $a3, 8($sp)
 	li $v0, 0 					#Whether or not it was found
-	move $v0, $a0
-	move $t1, $a1
+	move $t1, $a0
 
 generateWordToDisplayLoop:
-	lb $t0, 0($a1)				# Fully correct word
-	lb $t2, 0($a0) 				# Every guessed letter
+	lb $t2, 0($a1)				# Fully correct word
+	lb $t0, 0($a0) 				# Every guessed letter
 	beq $t0, $0, generateWordToDisplayEOW 	 #stop loop if its the end on string
 	lb $t3, underscore
 	beq $t0, $t2, addLetter
 generateWordToDisplayLoopContinue:
 	sb $t3, 0($a3)
 	addi $a3, $a3, 1
-	addi $a1, $a1, 1
+	addi $a0, $a0, 1
 	j generateWordToDisplayLoop
 
 addLetter:
@@ -282,14 +282,15 @@ addLetter:
 	j generateWordToDisplayLoopContinue
 
 generateWordToDisplayEOW:
-	move $a1, $t1
-	addi $a0, $a0, 1
-	lb $t5, 0($a0)
+	move $a0, $t1
+	addi $a1, $a1, 1
+	lb $t5, 0($a1)
 	beq $t5, $0 generateWordToDisplayEND
 	j generateWordToDisplayLoop
 
 generateWordToDisplayEND:
+	lw $a3, 8($sp)
 	lw $a1, 4($sp)				#load old a1
 	lw $a0, 0($sp)				#load old a0
-	addi $sp, $sp, 8			#deallocate
+	addi $sp, $sp, 12			#deallocate
 	jr $ra					#return
