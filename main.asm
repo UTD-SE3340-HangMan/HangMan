@@ -94,11 +94,8 @@ Goodbye:	.byte	#addresses?
 
 Guessed:	.space	32	#guessed letters
 
-<<<<<<< HEAD
 GuessSoFar:	.space 24 	#s _ s t e _ d
 .text
-=======
->>>>>>> eacfbd6890597a31357d5d6c1633a34d99c0c8a9
 
 ###############################################################################
 # Begin program
