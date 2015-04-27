@@ -1,4 +1,12 @@
 .data
+# File
+	Prompt_Filename:	.asciiz "Enter the location of the dictionary file.\n"
+	Incorrect_Filename:	.asciiz "File does not exist. Try again.\n"
+	fileName:			.asciiz ""		# Name of dictionary file
+	inputSize:			.word	1024	# Maximum length of input filename
+	fileBuffer:			.space	1024	# Reserve 1024 bytes for the file buffer
+
+# Pictures
 picture: .asciiz 	"_______\n|   |  \\|\n        |\n        |\n        |  ",
 					"\n        |\n        |\n        |\n       ---\n",
 					"_______\n|   |  \\|\n    O   |\n        |\n        |  ",
@@ -76,7 +84,7 @@ Length:		.word	13
 Welcome:	.asciiz "Welcome to Hangman"
 Guess_The_Word:	.asciiz "Guess the word."
 Yes:		.asciiz "Yes! "
-No:		.asciiz "No! "
+No:			.asciiz "No! "
 
 Guess:		.asciiz "Guess a letter.\n"
 Correct_Word:	.asciiz "The correct word was:\n"
@@ -86,13 +94,84 @@ Goodbye:	.byte	#addresses?
 
 Guessed:	.space	32	#guessed letters
 
+<<<<<<< HEAD
 GuessSoFar:	.space 24 	#s _ s t e _ d
 .text
+=======
+>>>>>>> eacfbd6890597a31357d5d6c1633a34d99c0c8a9
 
+###############################################################################
+# Begin program
+.text
 main:
+	jal openFile
 	jal init
 	jal runGame
 
+#----------------------------------------------------------
+incorrectInput:	# File did not exist
+	li $v0, 4		# 4 is function code for printing a string
+	la $a0, Incorrect_Filename	# Load string into a0
+	syscall # Print the message
+	
+#	Open the file in filename in read mode
+#	Read the first word of the file
+openFile:
+	getFileName:	# Get file path from user
+		# Display prompt
+		li $v0, 4			# 4 is function code for printing a string
+		la $a0, Prompt_Filename	# Load string into a0
+		syscall	# Print the prompt
+		
+		# Get user input
+		li $v0, 8			# 8 is function code for reading a string
+		la $a0, fileName	# Load fileName into a0
+		lw $a1, inputSize	# Load contents of inputSize into a1
+		syscall				# Input now stored in fileName
+
+		sanitizeFileName:	# Fix the input
+    		li $t0, 0       #loop counter
+    		lw $t1, inputSize      #loop end
+		clean:
+			beq $t0, $t1, openFile_Read
+			lb $t3, fileName($t0)
+			bne $t3, 0x0a, increment_t0
+			sb $zero, fileName($t0)
+			increment_t0:
+				addi $t0, $t0, 1
+				j clean
+
+	openFile_Read:	# Open file for reading
+		li $v0, 13			# 13 is function code for opening a file
+		la $a0, fileName	# fileName is the name of the file
+		li $a1, 0			# Open for reading (flags are 0: read, 1: write)
+		li $a2, 0			# ignore the mode
+		syscall	# file descriptor returned in v0
+		move $s7, $v0			# Store the file descriptor in s7
+		
+#	printFileName:	# Print the entered file name
+#		li $v0, 4			# 4 is function code for printing a string
+#		la $a0, fileName	# load fileName into a0
+#		syscall	# Print the filename
+		
+#	displayFileDescriptor:	# Show the file descriptor
+#		li $v0, 1			# 1 is function for printing an int
+#		move $a0, $s7			# set a0 = s7 = file descriptor
+#		syscall
+		
+	checkFileValidity:	# Make sure the file opened correctly
+		li $t0, -1			# Set t0 = -1
+		beq $s7, $t0, incorrectInput	# If descriptor = -1, then jump back and re-get input
+
+	jr $ra	# Return to caller
+	
+#	End openFile
+#------------------------------------------------------------------------
+
+init:
+	li $s0, 0		# $s0 will hold the number of turns taken.
+	jr $ra
+	
 runGame:
 	jal prompt_Character 		#Ask for a character
 	move $a2, $v0
@@ -113,10 +192,6 @@ doesNotContain: 				#possibly incorrect
 	jal drawMan
 	beq $s0, 5, outOfGuesses
 	j runGame
-	
-init:
-	li $s0, 0		# $s0 will hold the number of turns taken.
-	jr $ra
 
 drawMan:			# Expects $s0 to hold the number of turns taken.
 	
