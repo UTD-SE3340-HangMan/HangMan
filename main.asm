@@ -216,7 +216,6 @@ guessed_Update_Loop:
 	beq $t0, $0, guessed_Update_Loop_End	#stop loop if its the end on string
 	bne $t0, $a2, char_Not_Found		#branch if character doens match
 	li $v0, 1
-	sb $a2, 0($a0)				#store passed character in position
 
 char_Not_Found:
 	addi $a0, $a0, 1			#increment guessed buffer
@@ -224,6 +223,7 @@ char_Not_Found:
 	j guessed_Update_Loop
 	
 guessed_Update_Loop_End:
+	sb $a2, 0($a0)				#store passed character in position
 	lw $a0, 4($sp)				#load old a1
 	lw $a1, 0($sp)				#load old a0
 	addi $sp, $sp, 8			#deallocate
@@ -271,18 +271,22 @@ generateWordToDisplayLoop:
 	beq $t0, $0, generateWordToDisplayEOW 	 #stop loop if its the end on string
 	lb $t3, underscore
 	beq $t0, $t2, addLetter
+generateWordToDisplayLoopContinue:
 	sb $t3, 0($a3)
 	addi $a3, $a3, 1
 	addi $a1, $a1, 1
 	j generateWordToDisplayLoop
 
 addLetter:
-	move $t3, $t1	
+	move $t3, $t2
+	j generateWordToDisplayLoopContinue
 
 generateWordToDisplayEOW:
 	move $a1, $t1
 	addi $a0, $a0, 1
-	bne $a0, $0 generateWordToDisplayEND
+	lb $t5, 0($a0)
+	beq $t5, $0 generateWordToDisplayEND
+	j generateWordToDisplayLoop
 
 generateWordToDisplayEND:
 	lw $a1, 4($sp)				#load old a1
