@@ -99,8 +99,8 @@ runGame:
 	la $a1, Word50 				# We need to replace Word50 with the proper word
 	la $a0, Guessed
 	jal guessed_Update 			# make sure we have not previously guessed this.  
-	beq $v0, $0, wordDoesContain 	# Continue as if it was a correct answer
-	la $a2, GuessSoFar
+	bne $v0, $0, wordDoesContain 	# Continue as if it was a correct answer
+	la $a3, GuessSoFar
 	jal generateWordToDisplay 		# Will return _ _ _ A _ B _ C
 	jal string_Contains 			# test for correctness
 	beq $v0, $0, doesNotContain
@@ -180,9 +180,9 @@ prompt_Character:
 string_Contains:
 	addi $sp, $sp, -4			#allocate 4 bytes
 
-	sw $a0, 0($sp)				#store old a0
+	sw $a1, 0($sp)				#store old a0
 	
-	and $v0, $v0, $0			#set $v0 to 0 or false
+	li $v0, 0			#set $v0 to 0 or false
 
 string_Contains_Loop:
 	lb $t0, 0($a1)				#load character in from string
@@ -195,7 +195,7 @@ char_Found:
 	li $v0, 1				#if character found return value = 1
 
 string_Contains_Loop_End:
-	lw $a0, 0($sp)				#load old a0
+	lw $a1, 0($sp)				#load old a0
 	addi $sp, $sp, 4			#deallocate
 	jr $ra					#return 
 
@@ -207,12 +207,12 @@ string_Contains_Loop_End:
 
 guessed_Update:
 	addi $sp, $sp, -8			#allocate 4 bytes
-	sw $a0, 0($sp)				#store old a0
-	sw $a1, 4($sp)				#store old a1
+	sw $a1, 0($sp)				#store old a0
+	sw $a0, 4($sp)				#store old a1
 	li $v0, 0 					#Whether or not it was found
 
 guessed_Update_Loop:
-	lb $t0, 0($a1)				#load character from string
+	lb $t0, 0($a0)				#load character from string
 	beq $t0, $0, guessed_Update_Loop_End	#stop loop if its the end on string
 	bne $t0, $a2, char_Not_Found		#branch if character doens match
 	li $v0, 1
@@ -220,12 +220,12 @@ guessed_Update_Loop:
 
 char_Not_Found:
 	addi $a0, $a0, 1			#increment guessed buffer
-	addi $a1, $a1, 1			#increment string position
+	#addi $a2, $a2, 1			#increment string position
 	j guessed_Update_Loop
 	
 guessed_Update_Loop_End:
-	lw $a1, 4($sp)				#load old a1
-	lw $a0, 0($sp)				#load old a0
+	lw $a0, 4($sp)				#load old a1
+	lw $a1, 0($sp)				#load old a0
 	addi $sp, $sp, 8			#deallocate
 	jr $ra					#return
 	
@@ -271,8 +271,8 @@ generateWordToDisplayLoop:
 	beq $t0, $0, generateWordToDisplayEOW 	 #stop loop if its the end on string
 	lb $t3, underscore
 	beq $t0, $t2, addLetter
-	sb $t3, 0($a2)
-	addi $a2, $a2, 1
+	sb $t3, 0($a3)
+	addi $a3, $a3, 1
 	addi $a1, $a1, 1
 	j generateWordToDisplayLoop
 
