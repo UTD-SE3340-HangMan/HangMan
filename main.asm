@@ -77,8 +77,11 @@ Welcome:	.asciiz "Welcome to Hangman"
 Guess_The_Word:	.asciiz "Guess the word."
 Yes:		.asciiz "Yes! "
 No:		.asciiz "No! "
-Guess:		.asciiz "Guess a letter."
-Correct_Word:	.asciiz "The correct word was: "
+
+Guess:		.asciiz "Guess a letter.\n"
+Correct_Word:	.asciiz "The correct word was:\n"
+NewLine:	.asciiz "\n"
+
 Goodbye:	.byte	#addresses?
 
 Guessed:	.space	32	#guessed letters
@@ -135,8 +138,29 @@ outOfGuesses:
 
 #----------------------------------------------------------
 #	prompt character
-
-
+prompt_Character:
+	addi $sp, $sp, -12		#allocate 
+	sw $ra, 0($sp)			#store old ra
+	sw $a0, 4($sp)			#store old a0
+	sw $s0, 8($sp)			#store old s0
+	
+	addi $v0, $0, 12		#print string syscall
+	syscall				#v0 contains a character
+	
+	move $s0, $v0			#character saved temporarily
+	
+	la $a0, NewLine			
+	jal print			#print new line
+	jal print			#print new line
+	
+	move $v0, $s0			#character back in return register
+	
+	sw $ra, 0($sp)			#load old ra
+	sw $a0, 4($sp)			#load old a0
+	sw $s0, 8($sp)			#load old s0
+	addi $sp, $sp, 12		#deallocate
+	jr $ra				#return
+	
 #	end prompt character
 #----------------------------------------------------------
 
@@ -145,6 +169,7 @@ outOfGuesses:
 
 string_Contains:
 	addi $sp, $sp, -4			#allocate 4 bytes
+
 	sw $a0, 0($sp)				#store old a0
 	
 	and $v0, $v0, $0			#set $v0 to 0 or false
@@ -172,6 +197,7 @@ string_Contains_Loop_End:
 
 guessed_Update:
 	addi $sp, $sp, -8			#allocate 4 bytes
+
 	sw $a0, 0($sp)				#store old a0
 	sw $a1, 4($sp)				#store old a1
 
@@ -193,4 +219,28 @@ guessed_Update_Loop_End:
 	jr $ra					#return
 	
 #	end guessed letter
+#----------------------------------------------------------
+
+#----------------------------------------------------------
+#	print string
+
+print:
+	addi $v0, $0, 4				#print string
+	syscall
+	
+	jr $ra
+
+#	end print string
+#----------------------------------------------------------
+
+#----------------------------------------------------------
+#	print number
+
+print_num:
+	addi $v0, $0, 1				#print number
+	syscall
+	
+	jr $ra
+
+#	end print number
 #----------------------------------------------------------
