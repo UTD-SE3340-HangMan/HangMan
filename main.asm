@@ -13,7 +13,7 @@ picture: .asciiz 	"_______\n|   |  \\|\n        |\n        |\n        |  ",
 					"\n   / \\  |\n        |\n        |\n       ---\n",
 
 clearScreen: .asciiz "[2J"
-
+underscore:  .asciiz "_"
 sampleword:  .asciiz "s _ s t _ m d"
 
 #Word bank
@@ -86,6 +86,7 @@ Goodbye:	.byte	#addresses?
 
 Guessed:	.space	32	#guessed letters
 
+GuessSoFar:	.space 24 	#s _ s t e _ d
 .text
 
 main:
@@ -93,15 +94,24 @@ main:
 	jal runGame
 
 runGame:
-	# get input
-	# test for correctness
+	jal prompt_Character 		#Ask for a character
+	move $a2, $v0
+	la $a1, Word50 				# We need to replace Word50 with the proper word
+	la $a0, Guessed
+	jal guessed_Update 			# make sure we have not previously guessed this.  
+	beq $v0, $0, wordDoesContain 	# Continue as if it was a correct answer
+	la $a2, GuessSoFar
+	jal generateWordToDisplay 		# Will return _ _ _ A _ B _ C
+	jal string_Contains 			# test for correctness
+	beq $v0, $0, doesNotContain
+wordDoesContain: 				#correct
+	jal drawMan
+	j runGame
+doesNotContain: 				#possibly incorrect
 	# if incorrect:
+	addiu $s0, $s0, 1  			#Increment incorrect guesses
 	jal drawMan
 	beq $s0, 5, outOfGuesses
-	addiu $s0, $s0, 1
-	li $v0, 32 		#sleep
-	li $a0, 500 	#for 500 ms
-	syscall
 	j runGame
 	
 init:
@@ -126,7 +136,7 @@ drawMan:			# Expects $s0 to hold the number of turns taken.
 	syscall
 	addi $t2, $a0, 50 		# Calculate the bottom half of our hangman picture, save it in temp.
 	
-	la $a0, sampleword 		# Print the current status of the word
+	la $a0, GuessSoFar 		# Print the current status of the word
 	syscall
 
 	move $a0, $t2 			# Get back the bottom half of our hangman picture from temp
@@ -144,7 +154,7 @@ prompt_Character:
 	sw $a0, 4($sp)			#store old a0
 	sw $s0, 8($sp)			#store old s0
 	
-	addi $v0, $0, 12		#print string syscall
+	li $v0, 12			#print string syscall
 	syscall				#v0 contains a character
 	
 	move $s0, $v0			#character saved temporarily
@@ -155,9 +165,9 @@ prompt_Character:
 	
 	move $v0, $s0			#character back in return register
 	
-	sw $ra, 0($sp)			#load old ra
-	sw $a0, 4($sp)			#load old a0
-	sw $s0, 8($sp)			#load old s0
+	lw $ra, 0($sp)			#load old ra
+	lw $a0, 4($sp)			#load old a0
+	lw $s0, 8($sp)			#load old s0
 	addi $sp, $sp, 12		#deallocate
 	jr $ra				#return
 	
@@ -175,14 +185,14 @@ string_Contains:
 	and $v0, $v0, $0			#set $v0 to 0 or false
 
 string_Contains_Loop:
-	lb $t0, 0($a0)				#load character in from string
+	lb $t0, 0($a1)				#load character in from string
 	beq $t0, $0, string_Contains_Loop_End	#stop loop if end of string is reached
-	beq $t0, $a1, char_Found		#branch if character matches
-	addi $a0, $a0, 1			#increment string address to continue scanning
+	beq $t0, $a2, char_Found		#branch if character matches
+	addi $a1, $a1, 1			#increment string address to continue scanning
 	j string_Contains_Loop			#jump to top of loop 
 	
 char_Found:
-	addi $v0, $0, 1				#if character found return value = 1
+	li $v0, 1				#if character found return value = 1
 
 string_Contains_Loop_End:
 	lw $a0, 0($sp)				#load old a0
@@ -197,15 +207,16 @@ string_Contains_Loop_End:
 
 guessed_Update:
 	addi $sp, $sp, -8			#allocate 4 bytes
-
 	sw $a0, 0($sp)				#store old a0
 	sw $a1, 4($sp)				#store old a1
+	li $v0, 0 					#Whether or not it was found
 
 guessed_Update_Loop:
 	lb $t0, 0($a1)				#load character from string
 	beq $t0, $0, guessed_Update_Loop_End	#stop loop if its the end on string
 	bne $t0, $a2, char_Not_Found		#branch if character doens match
-	sb $a2, 0($a0)				#store passed characher in position
+	li $v0, 1
+	sb $a2, 0($a0)				#store passed character in position
 
 char_Not_Found:
 	addi $a0, $a0, 1			#increment guessed buffer
@@ -225,7 +236,7 @@ guessed_Update_Loop_End:
 #	print string
 
 print:
-	addi $v0, $0, 4				#print string
+	li $v0, 4				#print string
 	syscall
 	
 	jr $ra
@@ -237,10 +248,44 @@ print:
 #	print number
 
 print_num:
-	addi $v0, $0, 1				#print number
+	li $v0, 1				#print number
 	syscall
 	
 	jr $ra
 
 #	end print number
 #----------------------------------------------------------
+
+
+generateWordToDisplay:
+	addi $sp, $sp, -8			#allocate 4 bytes
+	sw $a0, 0($sp)				#store old a0
+	sw $a1, 4($sp)				#store old a1
+	li $v0, 0 					#Whether or not it was found
+	move $v0, $a0
+	move $t1, $a1
+
+generateWordToDisplayLoop:
+	lb $t0, 0($a1)				# Fully correct word
+	lb $t2, 0($a0) 				# Every guessed letter
+	beq $t0, $0, generateWordToDisplayEOW 	 #stop loop if its the end on string
+	lb $t3, underscore
+	beq $t0, $t2, addLetter
+	sb $t3, 0($a2)
+	addi $a2, $a2, 1
+	addi $a1, $a1, 1
+	j generateWordToDisplayLoop
+
+addLetter:
+	move $t3, $t1	
+
+generateWordToDisplayEOW:
+	move $a1, $t1
+	addi $a0, $a0, 1
+	bne $a0, $0 generateWordToDisplayEND
+
+generateWordToDisplayEND:
+	lw $a1, 4($sp)				#load old a1
+	lw $a0, 0($sp)				#load old a0
+	addi $sp, $sp, 8			#deallocate
+	jr $ra					#return
