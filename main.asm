@@ -133,9 +133,9 @@ sanitizeFileName:		# Fix the input
 clean:
 	beq 	$t0, $t1, openFRead
 	lb 	$t3, fileName($t0)
-	bne 	$t3, 0x0a, t0PlusPlus
-	sb 	$zero, fileName($t0)
-
+	bne 	$t3, 0x0a, t0PlusPlus	# We are not at newline
+	sb 	$zero, fileName($t0)	# Null-terminate fileName
+	j	openFRead
 t0PlusPlus:
 	addi 	$t0, $t0, 1
 	j 	clean
