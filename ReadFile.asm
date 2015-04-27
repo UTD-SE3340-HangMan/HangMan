@@ -1,8 +1,8 @@
 .data
-file:	.ascii 	""	# filename for input
+fileName:	.ascii 	""	# filename for input
 filePrompt:   .asciiz "Please enter the input file name: "
 endLine:.asciiz "\n"	# Newline character
-buffer: .space 1024		# Reserve space for file contents
+buffer: .space 1024		# Buffer of 1024 bytes
 
 .text
 getFileName:	# Prompt for name of word file
@@ -12,14 +12,15 @@ getFileName:	# Prompt for name of word file
     syscall
 	# Get user input
 	li	$v0, 8
-	la	$a0, file
+	la	$a0, fileName
 	li	$a1, 21
 	syscall		# Store up to 21 characters as "file"
+	
 
 readFile:	# Read the file
 	# Open file for reading
 	li   $v0, 13       # system call for open file
-	la   $a0, file     # input file name
+	la   $a0, fileName     # input file name
 	li   $a1, 0        # flag - 0 for reading
 	li   $a2, 0        # mode is ignored
 	syscall            # open a file 
