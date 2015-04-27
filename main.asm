@@ -264,16 +264,15 @@ generateWordToDisplay:
 	sw $a3, 8($sp)
 	li $v0, 0 					#Whether or not it was found
 	move $t1, $a0
+	lb $t3, underscore
 
 generateWordToDisplayLoop:
 	lb $t2, 0($a1)				# Fully correct word
 	lb $t0, 0($a0) 				# Every guessed letter
 	beq $t0, $0, generateWordToDisplayEOW 	 #stop loop if its the end on string
-	lb $t3, underscore
-	beq $t0, $t2, addLetter
+	beq $t0, $t2, addLetter 				# if one of our guesses is correct
 generateWordToDisplayLoopContinue:
 	sb $t3, 0($a3)
-	addi $a3, $a3, 1
 	addi $a0, $a0, 1
 	j generateWordToDisplayLoop
 
@@ -282,9 +281,11 @@ addLetter:
 	j generateWordToDisplayLoopContinue
 
 generateWordToDisplayEOW:
-	move $a0, $t1
-	addi $a1, $a1, 1
+	addi $a3, $a3, 1 			# go to the next location in our word to display
+	move $a0, $t1 				# go to the beginning of our guessed letters
+	addi $a1, $a1, 1 			# go to the next letter in our fully correct word
 	lb $t5, 0($a1)
+	lb $t3, underscore
 	beq $t5, $0 generateWordToDisplayEND
 	j generateWordToDisplayLoop
 
