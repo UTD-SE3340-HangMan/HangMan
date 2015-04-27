@@ -1,10 +1,10 @@
 .data
 # File
-Prompt_Filename:	.asciiz "Enter the location of the dictionary file.\n"
-Incorrect_Filename:	.asciiz "File does not exist. Try again.\n"
-fileName:		.asciiz ""	# Name of dictionary file
-inputSize:		.word	1024	# Maximum length of input filename
-fileBuffer:		.space	1024	# Reserve 1024 bytes for the file buffer
+promptFilename:	.asciiz "Enter the location of the dictionary file.\n"
+badFilename:	.asciiz "File does not exist. Try again.\n"
+fileName:	.asciiz ""	# Name of dictionary file
+inputSize:	.word	1024	# Maximum length of input filename
+fileBuffer:	.space	1024	# Reserve 1024 bytes for the file buffer
 
 # Pictures
 picture: 	.asciiz "_______\n|   |  \\|\n        |\n        |\n        |  ",
@@ -82,12 +82,12 @@ Length:		.word	13
 
 #String
 Welcome:	.asciiz "Welcome to Hangman"
-Guess_The_Word:	.asciiz "Guess the word."
+guessPrompt:	.asciiz "Guess the word."
 Yes:		.asciiz "Yes! "
 No:			.asciiz "No! "
 
 Guess:		.asciiz "Guess a letter.\n"
-Correct_Word:	.asciiz "The correct word was:\n"
+rightWord:	.asciiz "The correct word was:\n"
 NewLine:	.asciiz "\n"
 
 Goodbye:	.byte		#addresses?
@@ -108,7 +108,7 @@ main:
 #----------------------------------------------------------
 incorrectInput:	# File did not exist
 	li 	$v0, 4			# 4 is function code for printing a string
-	la 	$a0, Incorrect_Filename	# Load string into a0
+	la 	$a0, badFilename	# Load string into a0
 	syscall 			# Print the message
 	
 #	Open the file in filename in read mode
@@ -117,7 +117,7 @@ openFile:
 getFileName:			# Get file path from user
 	# Display prompt
 	li 	$v0, 4			# 4 is function code for printing a string
-	la 	$a0, Prompt_Filename	# Load string into a0
+	la 	$a0, promptFilename	# Load string into a0
 	syscall				# Print the prompt
 
 	# Get user input
@@ -129,16 +129,18 @@ getFileName:			# Get file path from user
 sanitizeFileName:		# Fix the input
 	li 	$t0, 0       	#loop counter
 	lw 	$t1, inputSize	#loop end
+
 clean:
-	beq 	$t0, $t1, openFile_Read
+	beq 	$t0, $t1, openFRead
 	lb 	$t3, fileName($t0)
-	bne 	$t3, 0x0a, increment_t0
+	bne 	$t3, 0x0a, t0PlusPlus
 	sb 	$zero, fileName($t0)
-increment_t0:
+
+t0PlusPlus:
 	addi 	$t0, $t0, 1
 	j 	clean
 
-openFile_Read:	# Open file for reading
+openFRead:	# Open file for reading
 	li 	$v0, 13		# 13 is function code for opening a file
 	la 	$a0, fileName	# fileName is the name of the file
 	li 	$a1, 0		# Open for reading (flags are 0: read, 1: write)
@@ -160,15 +162,15 @@ init:
 	jr 	$ra
 	
 runGame:
-	jal 	prompt_Character 		#Ask for a character
+	jal 	promptChar 		#Ask for a character
 	move 	$a2, $v0
 	la 	$a1, Word50 			# We need to replace Word50 with the proper word
 	la 	$a0, Guessed
-	jal 	guessed_Update 			# make sure we have not previously guessed this
+	jal 	updateGuess 			# make sure we have not previously guessed this
 	bne 	$v0, $0, wordDoesContain 	# Continue as if it was a correct answer
 	la 	$a3, GuessSoFar
 	jal 	generateWordToDisplay 		# Will return _ _ _ A _ B _ C
-	jal 	string_Contains 		# test for correctness
+	jal 	strContains 		# test for correctness
 	beq 	$v0, $0, doesNotContain
 
 wordDoesContain: 				#correct
@@ -212,7 +214,7 @@ outOfGuesses:
 
 #----------------------------------------------------------
 #	prompt character
-prompt_Character:
+promptChar:
 	addi 	$sp, $sp, -12		#allocate
 	sw 	$ra, 0($sp)		#store old ra
 	sw 	$a0, 4($sp)		#store old a0
@@ -241,22 +243,22 @@ prompt_Character:
 #----------------------------------------------------------
 #	check to see if a string contains a given character
 
-string_Contains:
+strContains:
 	addi 	$sp, $sp, -4	#allocate 4 bytes
 	sw 	$a1, 0($sp)	#store old a0
 	li 	$v0, 0		#set $v0 to 0 or false
 
-string_Contains_Loop:
-	lb 	$t0, 0($a1)				#load character in from string
-	beq 	$t0, $0, string_Contains_Loop_End	#stop loop if end of string is reached
-	beq 	$t0, $a2, char_Found			#branch if character matches
-	addi 	$a1, $a1, 1				#increment string address to continue scanning
-	j 	string_Contains_Loop			#jump to top of loop
+strContainsIter:
+	lb 	$t0, 0($a1)			#load character in from string
+	beq 	$t0, $0, strContainsIterBrk	#stop loop if end of string is reached
+	beq 	$t0, $a2, charFound		#branch if character matches
+	addi 	$a1, $a1, 1			#increment string address to continue scanning
+	j 	strContainsIter			#jump to top of loop
 	
-char_Found:
+charFound:
 	li 	$v0, 1		#if character found return value = 1
 
-string_Contains_Loop_End:
+strContainsIterBrk:
 	lw 	$a1, 0($sp)	#load old a0
 	addi 	$sp, $sp, 4	#deallocate
 	jr 	$ra		#return
@@ -267,24 +269,24 @@ string_Contains_Loop_End:
 #----------------------------------------------------------
 #	guessed letter
 
-guessed_Update:
+updateGuess:
 	addi 	$sp, $sp, -8			#allocate 4 bytes
 	sw 	$a1, 0($sp)			#store old a0
 	sw 	$a0, 4($sp)			#store old a1
 	li 	$v0, 0 				#Whether or not it was found
 
-guessed_Update_Loop:
+updateGuessIter:
 	lb $t0, 0($a0)				#load character from string
-	beq $t0, $0, guessed_Update_Loop_End	#stop loop if its the end on string
-	bne $t0, $a2, char_Not_Found		#branch if character doens match
+	beq $t0, $0, updateGuessIterBrk		#stop loop if its the end on string
+	bne $t0, $a2, charNotInWord		#branch if character doens match
 	li $v0, 1
 
-char_Not_Found:
+charNotInWord:
 	addi $a0, $a0, 1			#increment guessed buffer
 	#addi $a2, $a2, 1			#increment string position
-	j guessed_Update_Loop
+	j updateGuessIter
 	
-guessed_Update_Loop_End:
+updateGuessIterBrk:
 	sb $a2, 0($a0)				#store passed character in position
 	lw $a0, 4($sp)				#load old a1
 	lw $a1, 0($sp)				#load old a0
@@ -298,7 +300,7 @@ guessed_Update_Loop_End:
 #	print string
 
 print:
-	li 	$v0, 4				#print string
+	li 	$v0, 4	#print string
 	syscall
 	
 	jr 	$ra
@@ -309,8 +311,8 @@ print:
 #----------------------------------------------------------
 #	print number
 
-print_num:
-	li 	$v0, 1				#print number
+printNum:
+	li 	$v0, 1	#print number
 	syscall
 	
 	jr 	$ra
