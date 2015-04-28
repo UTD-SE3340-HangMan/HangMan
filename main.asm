@@ -45,12 +45,15 @@ rightWord:	.asciiz "The correct word was: "
 NewLine:	.asciiz "\n"
 
 lose:		.asciiz "You Lose!\n"
-win:		.asciiz "You Win!\n"
-Goodbye:	.byte		#addresses?
+win:		.asciiz "You Win!"
 
-Guessed:	.space	32	#guessed letters
+playAgain:	.asciiz "\nWould you like to play again? (y/n)\n"
 
-GuessSoFar:	.space	24 	#s _ s t e _ d
+Goodbye:	.asciiz "Goodbye!"
+
+Guessed:	.space	26	#guessed letters
+
+GuessSoFar:	.space	26 	#s _ s t e _ d
 .text
 
 ###############################################################################
@@ -62,10 +65,28 @@ main:
 	syscall
 
 	jal 	openFile
+	
+playGame:
 	jal	randomGenerator
+	la	$a0, Guessed		# Zero out the Guessed array, in case it's a new turn
+	jal	nukeSpace		
+	la	$a0, GuessSoFar
+	jal	nukeSpace		
 	li 	$s0, 0		# $s0 will hold the number of turns taken.
 	li	$s6, 0		# $s6 will hold the number of correct guesses.
 	jal 	runGame
+
+nukeSpace:
+	li	$t1, 0			# $t1 is our counter
+	move	$t0, $a0
+nukeSpaceLoop:
+	li	$t2, 0x0
+	sb	$t2, 0($t0)
+	addi	$t0, $t0, 1		# Move one word
+	addi	$t1, $t1, 1		# Increment counter
+	bne	$t1, 26, nukeSpaceLoop
+	jr	$ra
+
 
 #----------------------------------------------------------
 incorrectInput:	# File did not exist
@@ -262,6 +283,20 @@ youLose:
 	syscall
 
 Exit:
+	li	$v0, 4				# 4 is the function code for print string
+	la	$a0, playAgain			# Would you like to play again?
+	syscall
+
+	li	$v0, 12				# 12 is the function code for read character
+	syscall
+
+	beq	$v0, 0x79, playGame		# Lowercase Y, start from generating a random number
+	beq	$v0, 0x59, playGame		# Capital Y
+
+	li	$v0, 4				# 4 is the function code for print a string
+	la	$a0, Goodbye			# Say goodbye
+	syscall
+
 	li	$v0, 10				# 10 is the function code for terminate
 	syscall
 
@@ -402,6 +437,7 @@ generateWordToDisplayLoop:
 generateWordToDisplayLoopContinue:
 	sb 	$t3, 0($a3)
 	addi 	$a0, $a0, 1
+
 	j 	generateWordToDisplayLoop
 
 addLetter:
@@ -410,6 +446,11 @@ addLetter:
 
 generateWordToDisplayEOW:
 	addi 	$a3, $a3, 1 			# go to the next location in our word to display
+	
+	li	$t4, 0x20
+	sb	$t4, 0($a3)
+	addi	$a3, $a3, 1
+	
 	move 	$a0, $t1 			# go to the beginning of our guessed letters
 	addi 	$a1, $a1, 1 			# go to the next letter in our fully correct word
 	lb 	$t5, 0($a1)
