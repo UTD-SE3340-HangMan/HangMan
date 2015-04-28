@@ -14,12 +14,16 @@ picture: 	.asciiz "_______\n|   |  \\|\n        |\n        |\n        |  ",
 			"\n        |\n        |\n        |\n       ---\n",
 			"_______\n|   |  \\|\n    O   |\n        |\n        |  ",
 			"\n        |\n        |\n        |\n       ---\n",
+			"_______\n|   |  \\|\n    O   |\n    |   |\n        |  ",
+			"\n        |\n        |\n        |\n       ---\n",
 			"_______\n|   |  \\|\n    O   |\n    |   |\n    |   |  ",
 			"\n        |\n        |\n        |\n       ---\n",
 			"_______\n|   |  \\|\n    O   |\n   \\|   |\n    |   |  ",
 			"\n        |\n        |\n        |\n       ---\n",
 			"_______\n|   |  \\|\n    O   |\n   \\|/  |\n    |   |  ",
 			"\n        |\n        |\n        |\n       ---\n",
+			"_______\n|   |  \\|\n    O   |\n   \\|/  |\n    |   |  ",
+			"\n   /    |\n        |\n        |\n       ---\n",
 			"_______\n|   |  \\|\n    O   |\n   \\|/  |\n    |   |  ",
 			"\n   / \\  |\n        |\n        |\n       ---\n",
 
@@ -29,16 +33,17 @@ underscore:  	.asciiz "_"
 Length:		.word	13
 
 #String
-Welcome:	.asciiz "Welcome to Hangman"
-guessPrompt:	.asciiz "Guess the word."
+Welcome:	.asciiz "Welcome to Hangman!\n"
 Yes:		.asciiz "Yes!\n"
 No:		.asciiz "No!\n"
 already:	.asciiz "You already guessed that letter.\n"
 
 Guess:		.asciiz "Guess a letter.\n"
-rightWord:	.asciiz "The correct word was:\n"
+rightWord:	.asciiz "The correct word was: "
 NewLine:	.asciiz "\n"
 
+lose:		.asciiz "You Lose!\n"
+win:		.asciiz "You Win!\n"
 Goodbye:	.byte		#addresses?
 
 Guessed:	.space	32	#guessed letters
@@ -50,9 +55,13 @@ GuessSoFar:	.space	24 	#s _ s t e _ d
 # Begin program
 .text
 main:
+	li	$v0, 4
+	la	$a0, Welcome
+	syscall
+
 	jal 	openFile
 	jal	randomGenerator
-	jal 	init
+	li 	$s0, 0		# $s0 will hold the number of turns taken.
 	jal 	runGame
 
 #----------------------------------------------------------
@@ -107,11 +116,15 @@ readFile:					# Read from the file itself
 	la	$a1, fileBuffer			# Read into fileBuffer
 	li	$a2, 1024			# Read no more than 1024 bytes
 	syscall
+
+closeFile:					# Because we're good people
+	li	$v0, 16
+	syscall
+	
 	jr 	$ra				# Return to caller
 	
 #	End openFile
 #------------------------------------------------------------------------
-	syscall
 
 #------------------------------------------------------------------------
 #	Get a random word
@@ -161,11 +174,6 @@ finalizeWord:
 
 #	End getRandomWord
 #------------------------------------------------------------------------
-
-
-init:
-	li 	$s0, 0		# $s0 will hold the number of turns taken.
-	jr 	$ra
 	
 runGame:
 	jal 	promptChar 		#Ask for a character
@@ -202,7 +210,7 @@ doesNotContain: 				#possibly incorrect
 
 	addiu 	$s0, $s0, 1  			#Increment incorrect guesses
 	jal 	drawMan
-	beq 	$s0, 5, outOfGuesses
+	beq 	$s0, 7, outOfGuesses
 	j 	runGame
 
 clearTerm:
@@ -214,9 +222,8 @@ clearTerm:
 	la 	$a0, clearScreen 		# Ascii escape sequence to clear screen
 	syscall
 	jr	$ra	
+
 drawMan:			# Expects $s0 to hold the number of turns taken.
-
-
 	li 	$t1, 93 			# Each hangman guy is exactly 93 characters long
 	mul 	$t0, $s0, $t1 			# Multiply it by the current number of moved used
 	li 	$v0, 4 				# Print a string
@@ -233,7 +240,19 @@ drawMan:			# Expects $s0 to hold the number of turns taken.
 	jr 	$ra
 
 outOfGuesses:
-	#:(
+	li	$v0, 4				# 4 is the function code for print string
+	la	$a0, lose			# "You Lose!\n"
+	syscall
+
+	la	$a0, rightWord			# "The correct words was"
+	syscall
+
+	la	$a0, theWord			# The proper word
+	syscall
+
+Exit:
+	li	$v0, 10				# 10 is the function code for terminate
+	syscall
 
 #----------------------------------------------------------
 #	prompt character
