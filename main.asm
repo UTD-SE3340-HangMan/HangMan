@@ -310,6 +310,8 @@ youWin:
 	
 	la	$a0, Red			# ANSI escape code for Red
 	syscall
+	
+	jal	drawMan
 
 	la	$a0, win
 	syscall
@@ -319,6 +321,8 @@ youWin:
 	la	$a0, Blue			# ANSI escape code for Blue
 	syscall
 
+	jal	drawMan
+
 	la	$a0, win
 	syscall
 	
@@ -327,6 +331,8 @@ youWin:
 	la	$a0, Purple			# ANSI escape code for Purple
 	syscall
 
+	jal	drawMan
+
 	la	$a0, win
 	syscall
 	
@@ -334,6 +340,8 @@ youWin:
 
 	la	$a0, Green			# ANSI escape code for Green
 	syscall
+
+	jal	drawMan
 
 	la	$a0, win
 	syscall
@@ -351,7 +359,15 @@ clearLine:
 	syscall
 	
 	li	$v0, 4
-	la	$a0, clearToBegin		# Clear the line
+	la	$a0, clearScreen		# Clear the screen
+	syscall
+
+	li 	$v0, 11 			# Print a character
+	li 	$a0, 0x1b  			# ASCII escape
+	syscall
+	
+	li	$v0, 4
+	la	$a0, clearToBegin		# Move cursor back to beginning
 	syscall
 
 	li 	$v0, 11 			# Print a character
