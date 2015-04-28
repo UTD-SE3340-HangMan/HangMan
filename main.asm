@@ -28,14 +28,20 @@ picture: 	.asciiz "_______\n|   |  \\|\n        |\n        |\n        |  ",
 			"\n   / \\  |\n        |\n        |\n       ---\n",
 
 clearScreen:	.asciiz "[2J"
+clearToBegin:	.asciiz "[9D"
 underscore:  	.asciiz "_"
 
 Length:		.word	13
 
 #String
 Welcome:	.asciiz "Welcome to Hangman!\n"
-Yes:		.asciiz "Yes!\n"
-No:		.asciiz "No!\n"
+Green:		.asciiz	"[32m"
+Red:		.asciiz	"[31m"
+Blue:		.asciiz	"[34m"
+Purple:		.asciiz	"[35m"
+Default:	.asciiz	"[0m"
+Yes:		.asciiz "\nYes!\n"
+No:		.asciiz "\nNo!\n"
 already:	.asciiz "You already guessed that letter.\n"
 
 Guess:		.asciiz "Guess a letter.\n"
@@ -227,8 +233,15 @@ runGame:
 	beq 	$v0, $0, doesNotContain
 
 	# So it was a correct guess
-	la	$a0, Yes
+	li 	$v0, 11 			# Print a character
+	li 	$a0, 0x1b  			# ASCII escape
+	syscall
+
 	li	$v0, 4
+	la	$a0, Green			# ANSI escape code for green
+	syscall
+
+	la	$a0, Yes
 	syscall
 	j	wordDoesContain
 
@@ -243,9 +256,16 @@ wordDoesContain: 				#correct
 	jal	rightSound
 	j 	runGame
 
-doesNotContain: 				#possibly incorrect
-	la	$a0, No
+doesNotContain: 				#Incorrect guess
+	li 	$v0, 11 			# Print a character
+	li 	$a0, 0x1b  			# ASCII escape
+	syscall
+
 	li	$v0, 4
+	la	$a0, Red			# ANSI escape code for green
+	syscall
+
+	la	$a0, No
 	syscall
 
 	addiu 	$s0, $s0, 1  			#Increment incorrect guesses
@@ -285,12 +305,74 @@ youWin:
 	li	$v0, 4
 	la	$a0, win
 	syscall
+
+	jal clearLine
+	
+	la	$a0, Red			# ANSI escape code for Red
+	syscall
+
+	la	$a0, win
+	syscall
+
+	jal	clearLine
+
+	la	$a0, Blue			# ANSI escape code for Blue
+	syscall
+
+	la	$a0, win
+	syscall
+	
+	jal	clearLine
+	
+	la	$a0, Purple			# ANSI escape code for Purple
+	syscall
+
+	la	$a0, win
+	syscall
+	
+	jal	clearLine
+
+	la	$a0, Green			# ANSI escape code for Green
+	syscall
+
+	la	$a0, win
+	syscall
+
 	jal 	winSound
 	j	Exit
+
+clearLine:
+	li 	$v0, 11 			# Print a character
+	li 	$a0, 0x1b  			# ASCII escape
+	syscall
+	
+	li	$v0, 32				# Sleep
+	li	$a0, 200			# 200ms
+	syscall
+	
+	li	$v0, 4
+	la	$a0, clearToBegin		# Clear the line
+	syscall
+
+	li 	$v0, 11 			# Print a character
+	li 	$a0, 0x1b  			# ASCII escape
+	syscall
+
+	li	$v0, 4
+
+	jr	$ra
 
 youLose:
 	li	$v0, 4				# 4 is the function code for print string
 	la	$a0, lose			# "You Lose!\n"
+	syscall
+
+	li 	$v0, 11 			# Print a character
+	li 	$a0, 0x1b  			# ASCII escape
+	syscall
+
+	li	$v0, 4				# 4 is the function code for printing a string
+	la	$a0, Default			# ANSI escape code for reset
 	syscall
 
 	la	$a0, rightWord			# "The correct words was"
@@ -302,7 +384,15 @@ youLose:
 	jal	loseSound
 	
 Exit:
-	li	$v0, 4				# 4 is the function code for print string
+	
+	li 	$v0, 11 			# Print a character
+	li 	$a0, 0x1b  			# ASCII escape
+	syscall
+
+	li	$v0, 4				# 4 is the function code for printing a string
+	la	$a0, Default			# ANSI escape code for reset
+	syscall
+
 	la	$a0, playAgain			# Would you like to play again?
 	syscall
 
@@ -327,7 +417,14 @@ promptChar:
 	sw 	$a0, 4($sp)		# Store old a0
 	sw 	$s0, 8($sp)		# Store old s0
 	
+	li 	$v0, 11 			# Print a character
+	li 	$a0, 0x1b  			# ASCII escape
+	syscall
+
 	li	$v0, 4			# 4 is the function code for printing a string
+	la	$a0, Default		# ANSI escape code for reset
+	syscall
+
 	la	$a0, Guess 		# Guess a character
 	syscall
 
