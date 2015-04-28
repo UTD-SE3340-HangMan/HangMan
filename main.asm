@@ -54,7 +54,6 @@ Goodbye:	.asciiz "Goodbye!"
 Guessed:	.space	26	#guessed letters
 
 GuessSoFar:	.space	26 	#s _ s t e _ d
-.text
 
 ###############################################################################
 # Begin program
@@ -74,6 +73,20 @@ playGame:
 	jal	nukeSpace		
 	li 	$s0, 0		# $s0 will hold the number of turns taken.
 	li	$s6, 0		# $s6 will hold the number of correct guesses.
+
+	li	$t0, 0x21	# Set '!' as t0
+	la	$t1, Guessed	# Load Guessed into t1
+	sb	$t0, 0($t1)	# Store '!' in Guessed
+
+	# Display the empty gallows and blank spaces
+	jal	clearTerm		# Clear the terminal
+	la	$a1, theWord
+	la	$a0, Guessed
+	la	$a3, GuessSoFar
+	jal	generateWordToDisplay	# Will return all blanks
+	jal	drawMan			# Draw the empty gallows
+	
+	# Play the game
 	jal 	runGame
 
 nukeSpace:
@@ -87,8 +100,6 @@ nukeSpaceLoop:
 	bne	$t1, 26, nukeSpaceLoop
 	jr	$ra
 
-
-#----------------------------------------------------------
 incorrectInput:	# File did not exist
 	li 	$v0, 4			# 4 is function code for printing a string
 	la 	$a0, badFilename	# Load string into a0
@@ -200,15 +211,13 @@ finalizeWord:
 #	End getRandomWord
 #------------------------------------------------------------------------
 	
-runGame:
-	jal	clearTerm		# Clear the terminal
-	jal	drawMan			# Draw the empty gallows
+runGame:	
 	jal 	promptChar 		# Ask for a character
-	move 	$a2, $v0
+	move 	$a2, $v0		# Copy the input character to a2
 	jal	clearTerm
 	la 	$a1, theWord 		# We need to replace theWord with the proper word
 	la 	$a0, Guessed
-	jal 	updateGuess 		# make sure we have not previously guessed this
+	jal 	updateGuess 		# Make sure we have not previously guessed this
 	bne 	$v0, $0, alreadyGuessed # Continue as if it was a correct answer
 	la 	$a3, GuessSoFar
 	jal 	generateWordToDisplay 	# Will return _ _ _ A _ B _ C
@@ -368,37 +377,37 @@ strContainsIterBrk:
 #----------------------------------------------------------
 	
 #----------------------------------------------------------
-#	guessed letter
+# Guessed letter
 
 updateGuess:
-	addi 	$sp, $sp, -8			#allocate 4 bytes
-	sw 	$a1, 0($sp)			#store old a0
-	sw 	$a0, 4($sp)			#store old a1
-	li 	$v0, 0 				#Whether or not it was found
+	addi 	$sp, $sp, -8			# Allocate 4 bytes
+	sw 	$a1, 0($sp)			# Store old a0
+	sw 	$a0, 4($sp)			# Store old a1
+	li 	$v0, 0 				# Whether or not it was found
 
 updateGuessIter:
-	lb $t0, 0($a0)				#load character from string
-	beq $t0, $0, updateGuessIterBrk		#stop loop if its the end on string
-	bne $t0, $a2, charNotInWord		#branch if character doens match
+	lb $t0, 0($a0)				# Load character from string
+	beq $t0, $0, updateGuessIterBrk		# Stop loop if its the end on string
+	bne $t0, $a2, charNotInWord		# Branch if character doens match
 	li $v0, 1
 
 charNotInWord:
-	addi $a0, $a0, 1			#increment guessed buffer
-	#addi $a2, $a2, 1			#increment string position
+	addi $a0, $a0, 1			# Increment guessed buffer
+	#addi $a2, $a2, 1			# Increment string position
 	j updateGuessIter
 	
 updateGuessIterBrk:
-	sb $a2, 0($a0)				#store passed character in position
-	lw $a0, 4($sp)				#load old a1
-	lw $a1, 0($sp)				#load old a0
-	addi $sp, $sp, 8			#deallocate
-	jr $ra					#return
+	sb $a2, 0($a0)				# Store passed character in position
+	lw $a0, 4($sp)				# Load old a1
+	lw $a1, 0($sp)				# Load old a0
+	addi $sp, $sp, 8			# Deallocate
+	jr $ra					# Return
 	
-#	end guessed letter
+# End guessed letter
 #----------------------------------------------------------
 
 #----------------------------------------------------------
-#	print string
+# Print string
 
 print:
 	li 	$v0, 4	#print string
@@ -406,11 +415,11 @@ print:
 	
 	jr 	$ra
 
-#	end print string
+# End print string
 #----------------------------------------------------------
 
 #----------------------------------------------------------
-#	print number
+# Print number
 
 printNum:
 	li 	$v0, 1	#print number
@@ -418,24 +427,25 @@ printNum:
 	
 	jr 	$ra
 
-#	end print number
+# End print number
 #----------------------------------------------------------
 
-
+#---------------------------------------------------------
+#	Generate the word to display with underscores	
 generateWordToDisplay:
-	addi 	$sp, $sp, -12		#allocate 4 bytes
-	sw 	$a0, 0($sp)		#store old a0
-	sw 	$a1, 4($sp)		#store old a1
+	addi 	$sp, $sp, -12		# Allocate 4 bytes
+	sw 	$a0, 0($sp)		# Store old a0
+	sw 	$a1, 4($sp)		# Store old a1
 	sw 	$a3, 8($sp)
-	li 	$v0, 0 			#Whether or not it was found
+	li 	$v0, 0 			# Whether or not it was found
 	move 	$t1, $a0
 	lb 	$t3, underscore
 
 generateWordToDisplayLoop:
 	lb 	$t2, 0($a1)				# Fully correct word
 	lb 	$t0, 0($a0) 				# Every guessed letter
-	beq 	$t0, $0, generateWordToDisplayEOW 	# stop loop if its the end on string
-	beq 	$t0, $t2, addLetter 			# if one of our guesses is correct
+	beq 	$t0, $0, generateWordToDisplayEOW 	# Stop loop if its the end on string
+	beq 	$t0, $t2, addLetter 			# If one of our guesses is correct
 generateWordToDisplayLoopContinue:
 	sb 	$t3, 0($a3)
 	addi 	$a0, $a0, 1
@@ -447,14 +457,14 @@ addLetter:
 	j 	generateWordToDisplayLoopContinue
 
 generateWordToDisplayEOW:
-	addi 	$a3, $a3, 1 			# go to the next location in our word to display
+	addi 	$a3, $a3, 1 	# Go to the next location in our word to display
 	
 	li	$t4, 0x20
 	sb	$t4, 0($a3)
 	addi	$a3, $a3, 1
 	
-	move 	$a0, $t1 			# go to the beginning of our guessed letters
-	addi 	$a1, $a1, 1 			# go to the next letter in our fully correct word
+	move 	$a0, $t1 	# Go to the beginning of our guessed letters
+	addi 	$a1, $a1, 1 	# Go to the next letter in our fully correct word
 	lb 	$t5, 0($a1)
 	lb 	$t3, underscore
 	beq	$t5, $0 generateWordToDisplayEND
@@ -462,7 +472,7 @@ generateWordToDisplayEOW:
 
 generateWordToDisplayEND:
 	lw 	$a3, 8($sp)
-	lw 	$a1, 4($sp)	#load old a1
-	lw 	$a0, 0($sp)	#load old a0
-	addi 	$sp, $sp, 12	#deallocate
-	jr 	$ra		#return
+	lw 	$a1, 4($sp)	# Load old a1
+	lw 	$a0, 0($sp)	# Load old a0
+	addi 	$sp, $sp, 12	# Deallocate
+	jr 	$ra		# Return
