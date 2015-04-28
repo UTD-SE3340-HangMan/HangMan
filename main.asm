@@ -4,7 +4,10 @@ promptFilename:	.asciiz "Enter the location of the dictionary file.\n"
 badFilename:	.asciiz "File does not exist. Try again.\n"
 fileName:	.asciiz ""	# Name of dictionary file
 inputSize:	.word	1024	# Maximum length of input filename
-fileBuffer:	.space	1024	# Reserve 1024 bytes for the file buffer
+fileBuffer:	.space	1024	# Reserve 1024 bytes for the file bufrandomNext
+
+theWord:	.space	24	# THE WORD
+
 
 # Pictures
 picture: 	.asciiz "_______\n|   |  \\|\n        |\n        |\n        |  ",
@@ -22,61 +25,6 @@ picture: 	.asciiz "_______\n|   |  \\|\n        |\n        |\n        |  ",
 
 clearScreen:	.asciiz "[2J"
 underscore:  	.asciiz "_"
-sampleword:  	.asciiz "s _ s t _ m d"
-
-#Word bank
-Word1:		.asciiz "jazz"
-Word2:		.asciiz "strenghts"
-Word3:		.asciiz "gypsy"
-Word4:		.asciiz "rhythmic"
-Word5:		.asciiz "cognac"
-Word6:		.asciiz "jukebox"
-Word7:		.asciiz "sprightly"
-Word8:		.asciiz "asthma"
-Word9:		.asciiz "orphan"
-Word10:		.asciiz "months"
-Word11:		.asciiz "czar"
-Word12:		.asciiz "depths"
-Word13:		.asciiz "geniuses"
-Word14:		.asciiz "withhold"
-Word15:		.asciiz "powwow"
-Word16:		.asciiz "bookkeeper"
-Word17:		.asciiz "kamikaze"
-Word18:		.asciiz "fettuccine"
-Word19:		.asciiz "quagmire"
-Word20:		.asciiz "mannequin"
-Word21:		.asciiz "caribou"
-Word22:		.asciiz "nymph"
-Word23:		.asciiz "skiing"
-Word24:		.asciiz "queueing"
-Word25:		.asciiz "symphony"
-Word26:		.asciiz "crypt"
-Word27:		.asciiz "wintry"
-Word28:		.asciiz "twelfth"
-Word29:		.asciiz "sequoia"
-Word30:		.asciiz "gauntlet"
-Word31:		.asciiz "zoology"
-Word32:		.asciiz "unscrupulous"
-Word33:		.asciiz "tympani"
-Word34:		.asciiz "furlough"
-Word35:		.asciiz "coffee"
-Word36:		.asciiz "papaya"
-Word37:		.asciiz "brouhaha"
-Word38:		.asciiz "impromptu"
-Word39:		.asciiz "cyclists"
-Word40:		.asciiz "plateaued"
-Word41:		.asciiz "cushion"
-Word42:		.asciiz "alfalfa"
-Word43:		.asciiz "jambalaya"
-Word44:		.asciiz "ukulele"
-Word45:		.asciiz "anchovy"
-Word46:		.asciiz "messiah"
-Word47:		.asciiz "buoyed"
-Word48:		.asciiz "rendezvous"
-Word49:		.asciiz "paprika"
-Word50:		.asciiz "catchphrase"
-
-Words:		.word	Word1, Word2, Word3, Word4, Word5, Word6, Word7, Word8, Word9, Word10, Word11, Word12, Word13, Word14, Word15, Word16, Word17, Word18, Word19, Word20, Word21, Word22, Word23, Word24, Word25, Word26, Word27, Word28, Word29, Word30, Word31, Word32, Word33, Word34, Word35, Word36, Word37, Word38, Word39, Word40, Word41, Word42, Word43, Word44, Word45, Word46, Word47, Word48, Word49, Word50
 
 Length:		.word	13
 
@@ -102,6 +50,7 @@ GuessSoFar:	.space	24 	#s _ s t e _ d
 .text
 main:
 	jal 	openFile
+	jal	randomGenerator
 	jal 	init
 	jal 	runGame
 
@@ -146,16 +95,75 @@ openFRead:	# Open file for reading
 	li 	$a1, 0		# Open for reading (flags are 0: read, 1: write)
 	li 	$a2, 0		# ignore the mode
 	syscall			# file descriptor returned in v0
-	move 	$s7, $v0	# Store the file descriptor in s7
+	move 	$a0, $v0	# Store the file descriptor in a0
 		
 checkFileValidity:	# Make sure the file opened correctly
 	li 	$t0, -1				# Set t0 = -1
-	beq 	$s7, $t0, incorrectInput	# If descriptor = -1, then jump back and re-get input
+	beq 	$a0, $t0, incorrectInput	# If descriptor = -1, then jump back and re-get input
 
+readFile:					# Read from the file itself
+	li	$v0, 14				# 14 is the function code for reading a file
+	la	$a1, fileBuffer			# Read into fileBuffer
+	li	$a2, 1024			# Read no more than 1024 bytes
+	syscall
 	jr 	$ra				# Return to caller
 	
 #	End openFile
 #------------------------------------------------------------------------
+
+#------------------------------------------------------------------------
+#	Get a random word
+#	We know there are exactly 50 words.
+
+randomGenerator:
+	li	$v0, 30		# 30 is the function code for getting epoch time
+	syscall			# Low-order 32-bits are in $a0.  High-order are in $a1
+
+	li	$v0, 40		# 40 is the function code for setting the random seed
+	move	$a1, $a0	# Put the part of the time that actually changes every second in $a0
+	li	$a0, 0		# Random generator 0
+	syscall			# Random generator is now randomly seeded
+
+	li	$v0, 42		# 42 is the function code for
+	li	$a1, 50		# Our random number will be 0<=num<50
+	li	$a0, 0		# 0 is my favorite random number generator
+	syscall			# We now have a random number in $a0
+
+getRandomWord:
+	la	$t1, fileBuffer		# First character of our fileBuffer
+	li	$t0, 0			# Counter begins with 0
+	la	$t2, theWord		# The Word
+
+getRandomWordLoop:
+	lb	$t3, 0($t1)		# Load the fileBuffer's character
+	addi	$t1, $t1, 1		# Next character
+	beq     $t3, 0x0a, randomNext	# We are at newline
+	beq	$t0, $a0, rAddLetter	# Add the letter to the word
+	j	getRandomWordLoop
+
+randomNext:
+	beq     $t0, $a0, finalizeWord	# Null-terminate the word
+	addi	$t0, $t0, 1		# Increment our counter
+	j getRandomWordLoop
+
+rAddLetter:
+	sb	$t3, 0($t2)		# Put the letter into the word
+	addi	$t2, $t2, 1		# Next letter of the word
+	j	getRandomWordLoop
+
+finalizeWord:
+	li	$t3, 0x00
+	sb	$t3, 0($t2)		# Null-terminate theWord
+
+	la	$a0, theWord
+	li 	$v0, 4			#print string
+	syscall
+
+	jr	$ra
+
+#	End getRandomWord
+#------------------------------------------------------------------------
+
 
 init:
 	li 	$s0, 0		# $s0 will hold the number of turns taken.
@@ -164,7 +172,7 @@ init:
 runGame:
 	jal 	promptChar 		#Ask for a character
 	move 	$a2, $v0
-	la 	$a1, Word50 			# We need to replace Word50 with the proper word
+	la 	$a1, theWord 			# We need to replace theWord with the proper word
 	la 	$a0, Guessed
 	jal 	updateGuess 			# make sure we have not previously guessed this
 	bne 	$v0, $0, wordDoesContain 	# Continue as if it was a correct answer
