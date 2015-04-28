@@ -42,7 +42,8 @@ Purple:		.asciiz	"[35m"
 Default:	.asciiz	"[0m"
 Yes:		.asciiz "\nYes!\n"
 No:		.asciiz "\nNo!\n"
-already:	.asciiz "You already guessed that letter.\n"
+already:	.asciiz "\nYou already guessed that letter.\n"
+
 
 Guess:		.asciiz "Guess a letter.\n"
 invalidInput:	.asciiz "Invalid input: Only alphabetical characters are valid.\n"
