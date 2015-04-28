@@ -57,6 +57,8 @@ playAgain:	.asciiz "\nWould you like to play again? (y/n)\n"
 
 Goodbye:	.asciiz "Goodbye!"
 
+AllGuesses:	.asciiz	"Previously guessed: "
+
 Guessed:	.space	26	#guessed letters
 
 GuessSoFar:	.space	26 	#s _ s t e _ d
@@ -225,12 +227,14 @@ runGame:
 	la 	$a1, theWord 		# We need to replace theWord with the proper word
 	la 	$a0, Guessed
 	jal 	updateGuess 		# Make sure we have not previously guessed this
+	jal	showPreviousGuesses	# "Previously guessed: r, s, t, l, n, e
+
 	bne 	$v0, $0, alreadyGuessed # Continue as if it was a correct answer
 	la 	$a3, GuessSoFar
 
 	jal 	generateWordToDisplay 		# Will return _ _ _ A _ B _ C
 	jal 	strContains 		# test for correctness
-
+	
 	beq 	$v0, $0, doesNotContain
 
 	# So it was a correct guess
@@ -270,11 +274,57 @@ doesNotContain: 				#Incorrect guess
 	syscall
 
 	addiu 	$s0, $s0, 1  			#Increment incorrect guesses
+	
+	
 	jal 	drawMan
 	beq 	$s0, 7, youLose
 	jal	wrongSound
 
 	j 	runGame
+
+showPreviousGuesses:
+	addi 	$sp, $sp, -12		# Allocate
+	sw 	$ra, 0($sp)		# Store old ra
+	sw 	$a0, 4($sp)		# Store old a0
+	sw 	$v0, 8($sp)		# Store old s0
+
+	move	$t0, $a0
+	li	$v0, 4				# 4 is the function code to print a string
+	la	$a0, AllGuesses			# "Previously Guessed: "
+	syscall
+	
+	la	$t0, Guessed		# Get guessed characters
+	li	$v0, 11			# 11 is the function code to print a character
+
+	lb	$a0, 1($t0)		# Our first byte is the exclamation point, so start at 1
+	beq	$a0, 0, showGuessesEnd	# We've hit the end
+
+	syscall
+showGuessesLoop:
+
+	addi	$t0, $t0, 1
+
+	lb	$a0, 1($t0)
+	beq	$a0, 0, showGuessesEnd	# We've hit the end
+	move	$t1, $a0
+
+	li	$a0, 0x2c		# Print a comma
+	syscall
+
+	li	$a0, 0x20		# Print a space
+	syscall
+
+	move	$a0, $t1
+	syscall
+	j	showGuessesLoop
+
+showGuessesEnd:
+	lw	$ra, 0($sp)		# Load old ra
+	lw 	$a0, 4($sp)		# Load old a0
+	lw 	$v0, 8($sp)		# Load old s0
+	addi 	$sp, $sp, 12		# Deallocate
+
+	jr	$ra
 
 clearTerm:
 	li 	$v0, 11 			# Print a character
@@ -530,30 +580,6 @@ updateGuessIterBrk:
 	jr $ra					# Return
 	
 # End guessed letter
-#---------------------------------------------------------------------------------------------------
-
-#-------[ Convenience String Printing ]-------------------------------------------------------------
-# Print string
-
-print:
-	li 	$v0, 4	#print string
-	syscall
-	
-	jr 	$ra
-
-# End print string
-#---------------------------------------------------------------------------------------------------
-
-#-------[ Convenience Number Printing ]-------------------------------------------------------------
-# Print number
-
-printNum:
-	li 	$v0, 1	#print number
-	syscall
-	
-	jr 	$ra
-
-# End print number
 #---------------------------------------------------------------------------------------------------
 
 #-------[ String Reformating ]----------------------------------------------------------------------
