@@ -223,7 +223,6 @@ runGame:
 
 	jal 	generateWordToDisplay 		# Will return _ _ _ A _ B _ C
 	jal 	strContains 		# test for correctness
-	jal	wrongSound
 
 	beq 	$v0, $0, doesNotContain
 
@@ -252,6 +251,8 @@ doesNotContain: 				#possibly incorrect
 	addiu 	$s0, $s0, 1  			#Increment incorrect guesses
 	jal 	drawMan
 	beq 	$s0, 7, youLose
+	jal	wrongSound
+
 	j 	runGame
 
 clearTerm:
