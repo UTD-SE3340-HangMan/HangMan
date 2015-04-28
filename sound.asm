@@ -1,57 +1,28 @@
 .text
-main:
+main:	
+	jal	volumeVoice
 	jal rightGuess
-	jal wrongGuess
 	
 	li	$v0, 10
 	syscall
 
+volumeVoice:
+	li	$a2, 0	# instrument ID
+	li	$a3, 127# volume
+	li	$v0, 33
+	jr	$ra
+	
 rightGuess:
-	li	$v0, 33
 	li	$a0, 69
-	li	$a1, 250
-	li	$a2, 1
-	li	$a3, 127
+	li	$a1, 350
 	syscall
 
-	li	$v0, 33
-	li	$a0, 100
-	li	$a1, 250
-	li	$a2, 1
-	li	$a3, 127
+	li	$a0, 79
+	li	$a1, 350
 	syscall
 
-	li	$v0, 33
-	li	$a0, 150
-	li	$a1, 250
-	li	$a2, 1
-	li	$a3, 127
+	li	$a0, 89
+	li	$a1, 350
 	syscall
 	
 	jr $ra
-
-wrongGuess:
-	li	$v0, 33
-	li	$a0, 150
-	li	$a1, 250
-	li	$a2, 1
-	li	$a3, 127
-	syscall
-
-	li	$v0, 33
-	li	$a0, 100
-	li	$a1, 250
-	li	$a2, 1
-	li	$a3, 127
-	syscall
-
-	li	$v0, 33
-	li	$a0, 69
-	li	$a1, 250
-	li	$a2, 1
-	li	$a3, 127
-	syscall
-
-	jr $ra
-
-
