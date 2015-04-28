@@ -31,8 +31,9 @@ Length:		.word	13
 #String
 Welcome:	.asciiz "Welcome to Hangman"
 guessPrompt:	.asciiz "Guess the word."
-Yes:		.asciiz "Yes! "
-No:			.asciiz "No! "
+Yes:		.asciiz "Yes!\n"
+No:		.asciiz "No!\n"
+already:	.asciiz "You already guessed that letter.\n"
 
 Guess:		.asciiz "Guess a letter.\n"
 rightWord:	.asciiz "The correct word was:\n"
@@ -110,6 +111,7 @@ readFile:					# Read from the file itself
 	
 #	End openFile
 #------------------------------------------------------------------------
+	syscall
 
 #------------------------------------------------------------------------
 #	Get a random word
@@ -155,10 +157,6 @@ finalizeWord:
 	li	$t3, 0x00
 	sb	$t3, 0($t2)		# Null-terminate theWord
 
-	la	$a0, theWord
-	li 	$v0, 4			#print string
-	syscall
-
 	jr	$ra
 
 #	End getRandomWord
@@ -172,28 +170,42 @@ init:
 runGame:
 	jal 	promptChar 		#Ask for a character
 	move 	$a2, $v0
+	jal	clearTerm
 	la 	$a1, theWord 			# We need to replace theWord with the proper word
 	la 	$a0, Guessed
 	jal 	updateGuess 			# make sure we have not previously guessed this
-	bne 	$v0, $0, wordDoesContain 	# Continue as if it was a correct answer
+	bne 	$v0, $0, alreadyGuessed 	# Continue as if it was a correct answer
 	la 	$a3, GuessSoFar
 	jal 	generateWordToDisplay 		# Will return _ _ _ A _ B _ C
 	jal 	strContains 		# test for correctness
 	beq 	$v0, $0, doesNotContain
+
+	# So it was a correct guess
+	la	$a0, Yes
+	li	$v0, 4
+	syscall
+	j	wordDoesContain
+
+alreadyGuessed:
+	la	$a0, already			# "You have already guessed the letter"
+	li	$v0, 4
+	syscall
 
 wordDoesContain: 				#correct
 	jal 	drawMan
 	j 	runGame
 
 doesNotContain: 				#possibly incorrect
-	# if incorrect:
+	la	$a0, No
+	li	$v0, 4
+	syscall
+
 	addiu 	$s0, $s0, 1  			#Increment incorrect guesses
 	jal 	drawMan
 	beq 	$s0, 5, outOfGuesses
 	j 	runGame
 
-drawMan:			# Expects $s0 to hold the number of turns taken.
-	
+clearTerm:
 	li 	$v0, 11 			# Print a character
 	li 	$a0, 0x1b  			# Ascii escape
 	syscall
@@ -201,6 +213,9 @@ drawMan:			# Expects $s0 to hold the number of turns taken.
 	li 	$v0, 4 				# Print a string
 	la 	$a0, clearScreen 		# Ascii escape sequence to clear screen
 	syscall
+	jr	$ra	
+drawMan:			# Expects $s0 to hold the number of turns taken.
+
 
 	li 	$t1, 93 			# Each hangman guy is exactly 93 characters long
 	mul 	$t0, $s0, $t1 			# Multiply it by the current number of moved used
@@ -223,27 +238,31 @@ outOfGuesses:
 #----------------------------------------------------------
 #	prompt character
 promptChar:
-	addi 	$sp, $sp, -12		#allocate
-	sw 	$ra, 0($sp)		#store old ra
-	sw 	$a0, 4($sp)		#store old a0
-	sw 	$s0, 8($sp)		#store old s0
+	addi 	$sp, $sp, -12		# Allocate
+	sw 	$ra, 0($sp)		# Store old ra
+	sw 	$a0, 4($sp)		# Store old a0
+	sw 	$s0, 8($sp)		# Store old s0
 	
-	li 	$v0, 12			#print string syscall
-	syscall				#v0 contains a character
+	li	$v0, 4			# 4 is the function code for printing a string
+	la	$a0, Guess 		# Guess a character
+	syscall
+
+	li 	$v0, 12			# read string syscall
+	syscall				# v0 contains a character
 	
-	move 	$s0, $v0		#character saved temporarily
+	move 	$s0, $v0		# Character saved temporarily
 	
 	la 	$a0, NewLine
-	jal 	print			#print new line
-	jal 	print			#print new line
+	jal 	print			# Print new line
+	jal 	print			# Print new line
 	
-	move 	$v0, $s0		#character back in return register
+	move 	$v0, $s0		# Character back in return register
 	
-	lw	$ra, 0($sp)		#load old ra
-	lw 	$a0, 4($sp)		#load old a0
-	lw 	$s0, 8($sp)		#load old s0
-	addi 	$sp, $sp, 12		#deallocate
-	jr 	$ra			#return
+	lw	$ra, 0($sp)		# Load old ra
+	lw 	$a0, 4($sp)		# Load old a0
+	lw 	$s0, 8($sp)		# Load old s0
+	addi 	$sp, $sp, 12		# Deallocate
+	jr 	$ra			# Return
 	
 #	end prompt character
 #----------------------------------------------------------
