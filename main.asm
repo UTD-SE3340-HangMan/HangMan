@@ -220,11 +220,15 @@ runGame:
 	jal 	updateGuess 		# Make sure we have not previously guessed this
 	bne 	$v0, $0, alreadyGuessed # Continue as if it was a correct answer
 	la 	$a3, GuessSoFar
-	jal 	generateWordToDisplay 	# Will return _ _ _ A _ B _ C
-	jal 	strContains 		# Test for correctness
+
+	jal 	generateWordToDisplay 		# Will return _ _ _ A _ B _ C
+	jal 	strContains 		# test for correctness
+	jal	wrongSound
+
 	beq 	$v0, $0, doesNotContain
 
 	# So it was a correct guess
+	jal	rightSound
 	la	$a0, Yes
 	li	$v0, 4
 	syscall
@@ -280,6 +284,7 @@ youWin:
 	li	$v0, 4
 	la	$a0, win
 	syscall
+	jal 	winSound
 	j	Exit
 
 youLose:
@@ -293,6 +298,8 @@ youLose:
 	la	$a0, theWord			# The proper word
 	syscall
 
+	jal	loseSound
+	
 Exit:
 	li	$v0, 4				# 4 is the function code for print string
 	la	$a0, playAgain			# Would you like to play again?
@@ -472,7 +479,122 @@ generateWordToDisplayEOW:
 
 generateWordToDisplayEND:
 	lw 	$a3, 8($sp)
-	lw 	$a1, 4($sp)	# Load old a1
-	lw 	$a0, 0($sp)	# Load old a0
-	addi 	$sp, $sp, 12	# Deallocate
-	jr 	$ra		# Return
+	lw 	$a1, 4($sp)	#load old a1
+	lw 	$a0, 0($sp)	#load old a0
+	addi 	$sp, $sp, 12	#deallocate
+	jr 	$ra		#return
+
+
+#-----[ Sound Subroutines ]---------------------------------
+rightSound:
+	li	$a2, 0	# instrument ID
+	li	$a3, 127# volume
+	li	$v0, 33
+
+	li	$a0, 55
+	li	$a1, 100
+	syscall
+
+	li	$v0, 32
+	li	$a0, 65
+	syscall
+
+	li	$a2, 0	# instrument ID
+	li	$a3, 127# volume
+	li	$v0, 33
+
+	li	$a0, 60
+	li	$a1, 100
+	syscall
+
+	jr $ra
+
+wrongSound:
+	li	$a2, 0	# instrument ID
+	li	$a3, 127# volume
+	li	$v0, 33
+
+	li	$a0, 60
+	li	$a1, 100
+	syscall
+
+	li	$v0, 32
+	li	$a0, 65
+	syscall
+
+	li	$a2, 0	# instrument ID
+	li	$a3, 127# volume
+	li	$v0, 33
+
+	li	$a0, 55
+	li	$a1, 100
+	syscall
+
+	jr $ra
+
+winSound:
+	li	$a2, 0	# instrument ID
+	li	$a3, 127# volume
+	li	$v0, 33
+
+	li	$a0, 69
+	li	$a1, 100
+	syscall
+
+	li	$a0, 75
+	li	$a1, 100
+	syscall
+
+	li	$a0, 89
+	li	$a1, 100
+	syscall
+
+	li	$a0, 78
+	li	$a1, 250
+	syscall
+
+	li	$a0, 85
+	li	$a1, 100
+	syscall
+
+	li	$a0, 90
+	li	$a1, 250
+	syscall
+
+	li	$a0, 85
+	li	$a1, 250
+	syscall
+
+	li	$a0, 90
+	li	$a1, 250
+	syscall
+
+	li	$a0, 94
+	li	$a1, 500
+	syscall
+
+	jr $ra
+
+loseSound:
+	li	$a2, 0	# instrument ID
+	li	$a3, 127# volume
+	li	$v0, 33
+
+	li	$a0, 55
+	li	$a1, 500
+	syscall
+
+	li	$a0, 54
+	li	$a1, 500
+	syscall
+
+	li	$a0, 51
+	li	$a1, 500
+	syscall
+
+	li	$a0, 50
+	li	$a1, 1500
+	syscall
+
+	jr	$ra
+
