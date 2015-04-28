@@ -275,17 +275,13 @@ promptChar:
 	la	$a0, Guess 		# Guess a character
 	syscall
 
-	li 	$v0, 12			# read string syscall
+	li 	$v0, 12			# Read string syscall
 	syscall				# v0 contains a character
 	
-	move 	$s0, $v0		# Character saved temporarily
-	
-	la 	$a0, NewLine
-	jal 	print			# Print new line
-	jal 	print			# Print new line
-	
-	move 	$v0, $s0		# Character back in return register
-	
+	bge	$v0, 0x61, returnPrompt # We're probably lowercase
+	addi	$v0, $v0, 0x20		# Convert to lowercase
+
+returnPrompt:	
 	lw	$ra, 0($sp)		# Load old ra
 	lw 	$a0, 4($sp)		# Load old a0
 	lw 	$s0, 8($sp)		# Load old s0
