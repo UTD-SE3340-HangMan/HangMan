@@ -116,10 +116,10 @@ sanitizeFileName:		# Fix the input
 clean:
 	beq 	$t0, $t1, openFRead
 	lb 	$t3, fileName($t0)
-	bne 	$t3, 0x0a, t0PlusPlus	# We are not at newline
+	bne 	$t3, 0x0a, t0Increment	# We are not at newline
 	sb 	$zero, fileName($t0)	# Null-terminate fileName
 	j	openFRead
-t0PlusPlus:
+t0Increment:
 	addi 	$t0, $t0, 1
 	j 	clean
 
@@ -201,16 +201,18 @@ finalizeWord:
 #------------------------------------------------------------------------
 	
 runGame:
-	jal 	promptChar 		#Ask for a character
+	jal	clearTerm		# Clear the terminal
+	jal	drawMan			# Draw the empty gallows
+	jal 	promptChar 		# Ask for a character
 	move 	$a2, $v0
 	jal	clearTerm
-	la 	$a1, theWord 			# We need to replace theWord with the proper word
+	la 	$a1, theWord 		# We need to replace theWord with the proper word
 	la 	$a0, Guessed
-	jal 	updateGuess 			# make sure we have not previously guessed this
-	bne 	$v0, $0, alreadyGuessed 	# Continue as if it was a correct answer
+	jal 	updateGuess 		# make sure we have not previously guessed this
+	bne 	$v0, $0, alreadyGuessed # Continue as if it was a correct answer
 	la 	$a3, GuessSoFar
-	jal 	generateWordToDisplay 		# Will return _ _ _ A _ B _ C
-	jal 	strContains 		# test for correctness
+	jal 	generateWordToDisplay 	# Will return _ _ _ A _ B _ C
+	jal 	strContains 		# Test for correctness
 	beq 	$v0, $0, doesNotContain
 
 	# So it was a correct guess
