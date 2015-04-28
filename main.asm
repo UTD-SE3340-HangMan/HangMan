@@ -227,7 +227,6 @@ runGame:
 	beq 	$v0, $0, doesNotContain
 
 	# So it was a correct guess
-	jal	rightSound
 	la	$a0, Yes
 	li	$v0, 4
 	syscall
@@ -241,6 +240,7 @@ alreadyGuessed:
 wordDoesContain: 				#correct
 	jal 	drawMan
 	beq	$s5, $s6, youWin		# Correct guesses == Letters in word
+	jal	rightSound
 	j 	runGame
 
 doesNotContain: 				#possibly incorrect
