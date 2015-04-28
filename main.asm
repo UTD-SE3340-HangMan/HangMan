@@ -62,6 +62,7 @@ main:
 	jal 	openFile
 	jal	randomGenerator
 	li 	$s0, 0		# $s0 will hold the number of turns taken.
+	li	$s6, 0		# $s6 will hold the number of correct guesses.
 	jal 	runGame
 
 #----------------------------------------------------------
@@ -148,7 +149,7 @@ getRandomWord:
 	la	$t1, fileBuffer		# First character of our fileBuffer
 	li	$t0, 0			# Counter begins with 0
 	la	$t2, theWord		# The Word
-
+	li	$s5, 0			# Initialize the number of characters in the word
 getRandomWordLoop:
 	lb	$t3, 0($t1)		# Load the fileBuffer's character
 	addi	$t1, $t1, 1		# Next character
@@ -164,6 +165,7 @@ randomNext:
 rAddLetter:
 	sb	$t3, 0($t2)		# Put the letter into the word
 	addi	$t2, $t2, 1		# Next letter of the word
+	addi	$s5, $s5, 1		# Get the number of characters
 	j	getRandomWordLoop
 
 finalizeWord:
@@ -201,6 +203,7 @@ alreadyGuessed:
 
 wordDoesContain: 				#correct
 	jal 	drawMan
+	beq	$s5, $s6, youWin		# Correct guesses == Letters in word
 	j 	runGame
 
 doesNotContain: 				#possibly incorrect
@@ -210,7 +213,7 @@ doesNotContain: 				#possibly incorrect
 
 	addiu 	$s0, $s0, 1  			#Increment incorrect guesses
 	jal 	drawMan
-	beq 	$s0, 7, outOfGuesses
+	beq 	$s0, 7, youLose
 	j 	runGame
 
 clearTerm:
@@ -239,7 +242,13 @@ drawMan:			# Expects $s0 to hold the number of turns taken.
 	syscall
 	jr 	$ra
 
-outOfGuesses:
+youWin:
+	li	$v0, 4
+	la	$a0, win
+	syscall
+	j	Exit
+
+youLose:
 	li	$v0, 4				# 4 is the function code for print string
 	la	$a0, lose			# "You Lose!\n"
 	syscall
@@ -297,12 +306,14 @@ strContains:
 strContainsIter:
 	lb 	$t0, 0($a1)			#load character in from string
 	beq 	$t0, $0, strContainsIterBrk	#stop loop if end of string is reached
-	beq 	$t0, $a2, charFound		#branch if character matches
 	addi 	$a1, $a1, 1			#increment string address to continue scanning
+	beq 	$t0, $a2, charFound		#branch if character matches
 	j 	strContainsIter			#jump to top of loop
 	
 charFound:
+	addi	$s6, $s6, 1			# Increment the number of correct guesses
 	li 	$v0, 1		#if character found return value = 1
+	j	strContainsIter
 
 strContainsIterBrk:
 	lw 	$a1, 0($sp)	#load old a0
