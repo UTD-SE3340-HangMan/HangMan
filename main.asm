@@ -39,6 +39,8 @@ No:		.asciiz "No!\n"
 already:	.asciiz "You already guessed that letter.\n"
 
 Guess:		.asciiz "Guess a letter.\n"
+invalidInput:	.asciiz "Invalid input: Only alphabetical characters are valid.\n"
+
 rightWord:	.asciiz "The correct word was: "
 NewLine:	.asciiz "\n"
 
@@ -275,18 +277,27 @@ promptChar:
 	la	$a0, Guess 		# Guess a character
 	syscall
 
-	li 	$v0, 12			# Read string syscall
+	li 	$v0, 12			# 12 is the function code for reading a character
 	syscall				# v0 contains a character
 	
 	bge	$v0, 0x61, returnPrompt # We're probably lowercase
 	addi	$v0, $v0, 0x20		# Convert to lowercase
 
 returnPrompt:	
+	blt	$v0, 0x61, invalidChar	# Less than 'a'
+	bgt	$v0, 0x7a, invalidChar	# Greater than 'a'
 	lw	$ra, 0($sp)		# Load old ra
 	lw 	$a0, 4($sp)		# Load old a0
 	lw 	$s0, 8($sp)		# Load old s0
 	addi 	$sp, $sp, 12		# Deallocate
 	jr 	$ra			# Return
+
+invalidChar:
+	li	$v0, 4			# 4 is the function code for printing a string
+	la	$a0, invalidInput	# "Invalid, something something alphabet"
+	syscall
+
+	j	promptChar
 	
 #	end prompt character
 #----------------------------------------------------------
