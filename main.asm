@@ -623,7 +623,7 @@ generateWordToDisplayEOW:
 	move 	$a0, $t1 	# Go to the beginning of our guessed letters
 	addi 	$a1, $a1, 1 	# Go to the next letter in our fully correct word
 	lb 	$t5, 0($a1)
-	lb 	$t3, 0x5F	# Load underscore character
+	li 	$t3, 0x5F	# Load underscore character
 	beq	$t5, $0 generateWordToDisplayEND
 	j 	generateWordToDisplayLoop
 
