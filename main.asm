@@ -4,10 +4,9 @@ promptFilename:	.asciiz "Enter the location of the dictionary file.\n"
 badFilename:	.asciiz "File does not exist. Try again.\n"
 fileName:	.asciiz ""	# Name of dictionary file
 inputSize:	.word	1024	# Maximum length of input filename
-fileBuffer:	.space	1024	# Reserve 1024 bytes for the file bufrandomNext
+fileBuffer:	.space	1024	# Reserve 1024 bytes for the file buffer
 
-theWord:	.space	24	# THE WORD
-
+theWord:	.space	24	# the word
 
 # Pictures
 picture: 	.asciiz "_______\n|   |  \\|\n        |\n        |\n        |  ",
@@ -27,13 +26,10 @@ picture: 	.asciiz "_______\n|   |  \\|\n        |\n        |\n        |  ",
 			"_______\n|   |  \\|\n    O   |\n   \\|/  |\n    |   |  ",
 			"\n   / \\  |\n        |\n        |\n       ---\n",
 
-clearScreen:	.asciiz "[2J"
-clearToBegin:	.asciiz "[9D"
-underscore:  	.asciiz "_"
+clearScreen:	.asciiz "[2J"	# ISO/IEC 6429 clear screen code
+clearToBegin:	.asciiz "[9D"	# Code to move cursor 9 characters to the left
 
-Length:		.word	13
-
-#String
+# Strings
 Welcome:	.asciiz "Welcome to Hangman!\n"
 Green:		.asciiz	"[32m"
 Red:		.asciiz	"[31m"
@@ -60,33 +56,36 @@ Goodbye:	.asciiz "Goodbye!"
 
 AllGuesses:	.asciiz	"Previously guessed: "
 
-Guessed:	.space	26	#guessed letters
+Guessed:	.space	26	# Guessed letters
 
 GuessSoFar:	.space	26 	#s _ s t e _ d
 
 ###############################################################################
 # Begin program
 .text
-#------[ Start Main Program ]-----------------------------------------------------------------------
+
 main:
+	# Print the welcome
 	li	$v0, 4
 	la	$a0, Welcome
 	syscall
 
+	# Open file
 	jal 	openFile
-	
+
+# Play the game
 playGame:
 	jal	randomGenerator
 	la	$a0, Guessed		# Zero out the Guessed array, in case it's a new turn
 	jal	nukeSpace		
 	la	$a0, GuessSoFar
 	jal	nukeSpace		
-	li 	$s0, 0		# $s0 will hold the number of turns taken.
-	li	$s6, 0		# $s6 will hold the number of correct guesses.
+	li 	$s0, 0			# $s0 will hold the number of turns taken.
+	li	$s6, 0			# $s6 will hold the number of correct guesses.
 
-	li	$t0, 0x21	# Set '!' as t0
-	la	$t1, Guessed	# Load Guessed into t1
-	sb	$t0, 0($t1)	# Store '!' in Guessed
+	li	$t0, 0x21		# Set '!' as t0
+	la	$t1, Guessed		# Load Guessed into t1
+	sb	$t0, 0($t1)		# Store '!' in Guessed
 
 	# Display the empty gallows and blank spaces
 	jal	clearTerm		# Clear the terminal
@@ -104,35 +103,39 @@ nukeSpace:
 	move	$t0, $a0
 nukeSpaceLoop:
 	li	$t2, 0x0
-	sb	$t2, 0($t0)
+	sb	$t2, 0($t0)		
 	addi	$t0, $t0, 1		# Move one word
 	addi	$t1, $t1, 1		# Increment counter
 	bne	$t1, 26, nukeSpaceLoop
 	jr	$ra
 
-incorrectInput:	# File did not exist
+# File did not exist
+incorrectInput:
 	li 	$v0, 4			# 4 is function code for printing a string
 	la 	$a0, badFilename	# Load string into a0
 	syscall 			# Print the message
-	
-#-------[ File Access Subroutines ]------------------------------------------------------------------
+
+#-------[ File Access Subroutines ]----------------------------------------------
+#	Get the filename of the dictionary from the user
+#	Read that file into the file buffer
+
 openFile:
-getFileName:			# Get file path from user
+getFileName:				# Get file path from user
 	# Display prompt
 	li 	$v0, 4			# 4 is function code for printing a string
 	la 	$a0, promptFilename	# Load string into a0
 	syscall				# Print the prompt
 
 	# Get user input
-	li 	$v0, 8		# 8 is function code for reading a string
-	la 	$a0, fileName	# Load fileName into a0
-	lw 	$a1, inputSize	# Load contents of inputSize into a1
-	syscall			# Input now stored in fileName
+	li 	$v0, 8			# 8 is function code for reading a string
+	la 	$a0, fileName		# Load fileName into a0
+	lw 	$a1, inputSize		# Load contents of inputSize into a1
+	syscall				# Input now stored in fileName
 
-sanitizeFileName:		# Fix the input
-	li 	$t0, 0       	#loop counter
-	lw 	$t1, inputSize	#loop end
-
+# Remove the newline character from the user's input
+sanitizeFileName:			# Fix the input
+	li 	$t0, 0			# Loop counter
+	lw 	$t1, inputSize		# Loop end
 clean:
 	beq 	$t0, $t1, openFRead
 	lb 	$t3, fileName($t0)
@@ -143,34 +146,36 @@ t0Increment:
 	addi 	$t0, $t0, 1
 	j 	clean
 
-openFRead:	# Open file for reading
-	li 	$v0, 13		# 13 is function code for opening a file
-	la 	$a0, fileName	# fileName is the name of the file
-	li 	$a1, 0		# Open for reading (flags are 0: read, 1: write)
-	li 	$a2, 0		# ignore the mode
-	syscall			# file descriptor returned in v0
-	move 	$a0, $v0	# Store the file descriptor in a0
-		
-checkFileValidity:	# Make sure the file opened correctly
-	li 	$t0, -1				# Set t0 = -1
-	beq 	$a0, $t0, incorrectInput	# If descriptor = -1, then jump back and re-get input
+# Open file for reading
+openFRead:
+	li 	$v0, 13			# 13 is function code for opening a file
+	la 	$a0, fileName		# FileName is the name of the file
+	li 	$a1, 0			# Open for reading (flags are 0: read, 1: write)
+	li 	$a2, 0			# Ignore the mode
+	syscall				# File descriptor returned in v0
+	move 	$a0, $v0		# Store the file descriptor in a0
 
-readFile:					# Read from the file itself
-	li	$v0, 14				# 14 is the function code for reading a file
-	la	$a1, fileBuffer			# Read into fileBuffer
-	li	$a2, 1024			# Read no more than 1024 bytes
+# Make sure the file opened correctly
+checkFileValidity:
+	li 	$t0, -1				# Set t0 = -1
+	beq 	$a0, $t0, incorrectInput	# If descriptor = -1, then get new input
+
+# Read the entire file into the fileBuffer
+readFile:				# Read from the file itself
+	li	$v0, 14			# 14 is the function code for reading a file
+	la	$a1, fileBuffer		# Read into fileBuffer
+	li	$a2, 1024		# Read no more than 1024 bytes
 	syscall
 
-closeFile:					# Because we're good people
+# Close the dictionary file
+closeFile:				# Because we're good people
 	li	$v0, 16
 	syscall
-	
-	jr 	$ra				# Return to caller
-	
-#	End openFile
-#----------------------------------------------------------------------------------------------------
 
-#-------[ Word Randomization ]----------------------------------------------------------------------
+# Return to caller
+jr 	$ra
+
+#-------[ Word Randomization ]---------------------------------------------------
 #	Get a random word
 #	We know there are exactly 50 words.
 
@@ -477,12 +482,11 @@ Exit:
 	li	$v0, 10				# 10 is the function code for terminate
 	syscall
 
-
+#	end Main Game Logic
 #---------------------------------------------------------------------------------------------------
 
 #-------[ User Interaction ]------------------------------------------------------------------------
-
-#	prompt character
+#	Prompt Character
 promptChar:
 	addi 	$sp, $sp, -12		# Allocate
 	sw 	$ra, 0($sp)		# Store old ra
@@ -522,38 +526,40 @@ invalidChar:
 
 	j	promptChar
 	
-#	end prompt character
-#---------------------------------------------------------------------------------------------------
+#	end Prompt Character
+#--------------------------------------------------------------------------------
 
-#-------[ String Handling ]-------------------------------------------------------------------------
+#-------[ String Handling ]------------------------------------------------------
 #	check to see if a string contains a given character
 
 strContains:
-	addi 	$sp, $sp, -4	#allocate 4 bytes
-	sw 	$a1, 0($sp)	#store old a0
-	li 	$v0, 0		#set $v0 to 0 or false
+	addi 	$sp, $sp, -4	# Allocate 4 bytes
+	sw 	$a1, 0($sp)	# Store old a0
+	li 	$v0, 0		# Set $v0 to 0 or false
 
 strContainsIter:
-	lb 	$t0, 0($a1)			#load character in from string
-	beq 	$t0, $0, strContainsIterBrk	#stop loop if end of string is reached
-	addi 	$a1, $a1, 1			#increment string address to continue scanning
-	beq 	$t0, $a2, charFound		#branch if character matches
-	j 	strContainsIter			#jump to top of loop
+	lb 	$t0, 0($a1)			# Load character in from string
+	beq 	$t0, $0, strContainsIterBrk	# Stop loop if end of string is reached
+	addi 	$a1, $a1, 1			# Increment string address to continue scanning
+	beq 	$t0, $a2, charFound		# Branch if character matches
+	j 	strContainsIter			# Jump to top of loop
 	
 charFound:
-	addi	$s6, $s6, 1			# Increment the number of correct guesses
-	li 	$v0, 1		#if character found return value = 1
+	addi	$s6, $s6, 1	# Increment the number of correct guesses
+	li 	$v0, 1		# If character found return value = 1
 	j	strContainsIter
 
 strContainsIterBrk:
-	lw 	$a1, 0($sp)	#load old a0
-	addi 	$sp, $sp, 4	#deallocate
-	jr 	$ra		#return
+	lw 	$a1, 0($sp)	# Load old a0
+	addi 	$sp, $sp, 4	# Deallocate
 
-#	end character check
-#---------------------------------------------------------------------------------------------------
+	# Return to caller
+	jr 	$ra		# Return
 
-#-------[ Guess Logic ]-----------------------------------------------------------------------------
+#	end String Handling
+#--------------------------------------------------------------------------------
+
+#-------[ Guess Logic ]----------------------------------------------------------
 # Guessed letter
 
 updateGuess:
@@ -580,12 +586,9 @@ updateGuessIterBrk:
 	addi $sp, $sp, 8			# Deallocate
 	jr $ra					# Return
 	
-# End guessed letter
-#---------------------------------------------------------------------------------------------------
+# String Reformating ------------------------------------------------------------
+#	Generate the word to display with underscores
 
-#-------[ String Reformating ]----------------------------------------------------------------------
-
-#	Generate the word to display with underscores	
 generateWordToDisplay:
 	addi 	$sp, $sp, -12		# Allocate 4 bytes
 	sw 	$a0, 0($sp)		# Store old a0
@@ -593,7 +596,7 @@ generateWordToDisplay:
 	sw 	$a3, 8($sp)
 	li 	$v0, 0 			# Whether or not it was found
 	move 	$t1, $a0
-	lb 	$t3, underscore
+	li 	$t3, 0x5F		# Load underscore character
 
 generateWordToDisplayLoop:
 	lb 	$t2, 0($a1)				# Fully correct word
@@ -620,7 +623,7 @@ generateWordToDisplayEOW:
 	move 	$a0, $t1 	# Go to the beginning of our guessed letters
 	addi 	$a1, $a1, 1 	# Go to the next letter in our fully correct word
 	lb 	$t5, 0($a1)
-	lb 	$t3, underscore
+	lb 	$t3, 0x5F	# Load underscore character
 	beq	$t5, $0 generateWordToDisplayEND
 	j 	generateWordToDisplayLoop
 
@@ -631,12 +634,10 @@ generateWordToDisplayEND:
 	addi 	$sp, $sp, 12	#deallocate
 	jr 	$ra		#return
 
-#---------------------------------------------------------------------------------------------------
-
-#-------[ Sound Subroutines ]-----------------------------------------------------------------------
+# Sound Subroutines -------------------------------------------------------------
 rightSound:
-	li	$a2, 0	# instrument ID
-	li	$a3, 127# volume
+	li	$a2, 0		# instrument ID
+	li	$a3, 127	# volume
 	li	$v0, 33
 
 	li	$a0, 55
@@ -647,8 +648,8 @@ rightSound:
 	li	$a0, 65
 	syscall
 
-	li	$a2, 0	# instrument ID
-	li	$a3, 127# volume
+	li	$a2, 0		# instrument ID
+	li	$a3, 127	# volume
 	li	$v0, 33
 
 	li	$a0, 60
@@ -658,8 +659,8 @@ rightSound:
 	jr $ra
 
 wrongSound:
-	li	$a2, 0	# instrument ID
-	li	$a3, 127# volume
+	li	$a2, 0		# instrument ID
+	li	$a3, 127	# volume
 	li	$v0, 33
 
 	li	$a0, 60
@@ -670,8 +671,8 @@ wrongSound:
 	li	$a0, 65
 	syscall
 
-	li	$a2, 0	# instrument ID
-	li	$a3, 127# volume
+	li	$a2, 0		# instrument ID
+	li	$a3, 127	# volume
 	li	$v0, 33
 
 	li	$a0, 55
@@ -681,8 +682,8 @@ wrongSound:
 	jr $ra
 
 winSound:
-	li	$a2, 0	# instrument ID
-	li	$a3, 127# volume
+	li	$a2, 0		# instrument ID
+	li	$a3, 127	# volume
 	li	$v0, 33
 
 	li	$a0, 69
@@ -724,8 +725,8 @@ winSound:
 	jr $ra
 
 loseSound:
-	li	$a2, 0	# instrument ID
-	li	$a3, 127# volume
+	li	$a2, 0		# instrument ID
+	li	$a3, 127	# volume
 	li	$v0, 33
 
 	li	$a0, 55
@@ -746,6 +747,6 @@ loseSound:
 
 	jr	$ra
 
-#---------------------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------
 
-#-------[ EOF ]-------------------------------------------------------------------------------------
+#-------[ EOF ]------------------------------------------------------------------
